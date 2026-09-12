@@ -3,19 +3,17 @@
 # ServiceNow Settings
 snow:
   instance_url: "https://yourcompany.service-now.com"
-  login_path: "/login.do"
   approvals_path: "/approvals.do"  # Or "/sysapproval_approver_list.do"
   
 # IIS Server Settings
 iis:
   base_url: "https://iis-server.company.com"
-  login_path: "/login"
   asset_search_path: "/asset-search"
 
 # Browser Settings
 browser:
   headless: false  # Set to true for production
-  slow_mo: 100     # Milliseconds between actions (helps with SSO)
+  slow_mo: 100     # Milliseconds between actions
   timeout: 30000   # Default timeout in ms
 
 # Schedule Settings
@@ -24,28 +22,19 @@ schedule:
   interval_minutes: 5  # Check every 5 minutes
   max_runs_per_day: 10  # Safety limit
 
+# Login Settings
+# User will manually login - agent waits for login to complete
+login:
+  wait_for_login: true
+  login_timeout: 120000  # 2 minutes to complete manual login
+
 # Logging
 logging:
   log_dir: "./logs"
   log_file: "decisions.csv"
   log_level: "INFO"
 
-# Credentials (USE ENVIRONMENT VARIABLES IN PRODUCTION)
-# Never hardcode passwords!
-credentials:
-  snow_username: "${SNOW_USERNAME}"
-  snow_password: "${SNOW_PASSWORD}"
-  iis_username: "${IIS_USERNAME}"
-  iis_password: "${IIS_PASSWORD}"
-
 # CAD Rules (Placeholder - will be configured later)
 cad_rules:
   enabled: false
   rules: []
-  # Example rules (to be added later):
-  # - name: "license_check"
-  #   field: "software_license"
-  #   condition: "valid"
-  # - name: "version_check"
-  #   field: "version"
-  #   condition: ">=2.0"

@@ -1,9 +1,8 @@
 """
 ServiceNow Browser Automation Module
-Handles SSO login and ticket management via Playwright
+Handles ticket management via Playwright - user logs in manually
 """
 
-import os
 from playwright.sync_api import sync_playwright, Page, Browser
 from typing import Optional, List, Dict
 
@@ -37,41 +36,38 @@ class SnowBrowser:
         if self.playwright:
             self.playwright.stop()
     
-    def login_sso(self, username: str, password: str) -> bool:
+    def open_snow_and_wait_for_login(self) -> bool:
         """
-        Login to ServiceNow via SSO
-        Note: SSO flow varies by organization
-        This is a generic template - customize for your SSO
+        Opens ServiceNow and waits for user to complete manual login
+        Returns True when login is detected
         """
         try:
             # Navigate to ServiceNow
+            print(f"\n🔑 Opening ServiceNow: {self.instance_url}")
+            print("   👉 Please complete login in the browser window")
             self.page.goto(self.instance_url)
             
-            # Wait for SSO redirect (Microsoft ADFS/Azure AD)
-            # This will vary based on your SSO provider
-            self.page.wait_for_url("**/login**", timeout=10000)
+            # Wait for user to complete login
+            # We detect login by waiting for the main dashboard/nav
+            login_timeout = self.config.get('login', {}).get('login_timeout', 120000)
             
-            # Enter username
-            self.page.fill('input[name="username"], input[id="username"]', username)
-            self.page.click('button[type="submit"], input[type="submit"]')
+            print(f"   ⏳ Waiting for login (timeout: {login_timeout//1000}s)...")
             
-            # Wait for password field
-            self.page.wait_for_selector('input[name="password"], input[id="password"]', timeout=10000)
-            self.page.fill('input[name="password"], input[id="password"]', password)
-            self.page.click('button[type="submit"], input[type="submit"])
+            # Wait for ServiceNow homepage elements
+            self.page.wait_for_selector(
+                '.navpage-main, .nav-header, #sysverb_home, .page_loading',
+                timeout=login_timeout
+            )
             
-            # Handle MFA if present (placeholder)
-            # self.page.wait_for_selector('#mfa-code', timeout=5000)
-            # self.page.fill('#mfa-code', get_mfa_code())
+            # Additional wait to ensure page is fully loaded
+            self.page.wait_for_load_state('networkidle')
             
-            # Wait for ServiceNow homepage
-            self.page.wait_for_selector('.navpage-main', timeout=30000)
-            
-            print("✅ SSO Login successful")
+            print("✅ Login detected! Agent is now active.")
             return True
             
         except Exception as e:
-            print(f"❌ SSO Login failed: {e}")
+            print(f"❌ Login timeout or error: {e}")
+            print("   Please ensure you completed login in the browser")
             return False
     
     def get_pending_approvals(self) -> List[Dict]:
@@ -82,11 +78,11 @@ class SnowBrowser:
             self.page.goto(approvals_url)
             
             # Wait for list to load
-            self.page.wait_for_selector('.list_row', timeout=15000)
+            self.page.wait_for_selector('.list_row, .data_row', timeout=15000)
             
             # Extract tickets
             tickets = []
-            rows = self.page.query_selector_all('.list_row')
+            rows = self.page.query_selector_all('.list_row, .data_row')
             
             for row in rows:
                 ticket = {

@@ -1,9 +1,9 @@
 """
 IIS Server Browser Automation Module
-Handles asset search and CAD compliance checking
+Handles asset search and CAD compliance checking - user logs in manually
 """
 
-from playwright.sync_api import Page, Browser
+from playwright.sync_api import Page
 from typing import Optional, Dict
 
 
@@ -19,30 +19,37 @@ class IISChecker:
         """Set the browser page to use"""
         self.page = page
     
-    def login(self, username: str, password: str) -> bool:
-        """Login to IIS server"""
+    def open_iis_and_wait_for_login(self) -> bool:
+        """
+        Opens IIS server and waits for user to complete manual login
+        Returns True when login is detected
+        """
         try:
-            login_url = f"{self.base_url}{self.config['iis']['login_path']}"
-            self.page.goto(login_url)
+            # Navigate to IIS server
+            print(f"\n🔑 Opening IIS Server: {self.base_url}")
+            print("   👉 Please complete login in the browser window")
+            self.page.goto(self.base_url)
             
-            # Wait for login form
-            self.page.wait_for_selector('input[name="username"], input[name="user"]', timeout=10000)
+            # Wait for user to complete login
+            login_timeout = self.config.get('login', {}).get('login_timeout', 120000)
             
-            # Fill credentials
-            self.page.fill('input[name="username"], input[name="user"]', username)
-            self.page.fill('input[name="password"], input[name="pass"]', password)
+            print(f"   ⏳ Waiting for login (timeout: {login_timeout//1000}s)...")
             
-            # Submit
-            self.page.click('button[type="submit"], input[type="submit"]')
+            # Wait for dashboard/homepage elements
+            self.page.wait_for_selector(
+                '.dashboard, .main-content, #content, .home-page',
+                timeout=login_timeout
+            )
             
-            # Wait for dashboard/homepage
+            # Additional wait to ensure page is fully loaded
             self.page.wait_for_load_state('networkidle')
             
-            print("✅ IIS Login successful")
+            print("✅ IIS Login detected! Agent is now active.")
             return True
             
         except Exception as e:
-            print(f"❌ IIS Login failed: {e}")
+            print(f"❌ IIS Login timeout or error: {e}")
+            print("   Please ensure you completed login in the browser")
             return False
     
     def search_asset(self, asset_id: str) -> Optional[Dict]:

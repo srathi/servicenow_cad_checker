@@ -1,13 +1,11 @@
 """
 ServiceNow Ticket Approval Agent
-Main orchestrator script
+Main orchestrator script - User logs in manually, agent takes over
 """
 
-import os
 import time
 import yaml
 from pathlib import Path
-from dotenv import load_dotenv
 
 from modules.snow_browser import SnowBrowser
 from modules.iis_checker import IISChecker
@@ -21,20 +19,6 @@ def load_config() -> dict:
     config_path = Path(__file__).parent / "config.yaml"
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
-
-
-def load_credentials(config: dict) -> dict:
-    """Load credentials from environment variables"""
-    load_dotenv()
-    
-    credentials = config.get('credentials', {})
-    
-    return {
-        'snow_username': os.getenv('SNOW_USERNAME', credentials.get('snow_username', '')),
-        'snow_password': os.getenv('SNOW_PASSWORD', credentials.get('snow_password', '')),
-        'iis_username': os.getenv('IIS_USERNAME', credentials.get('iis_username', '')),
-        'iis_password': os.getenv('IIS_PASSWORD', credentials.get('iis_password', '')),
-    }
 
 
 def process_ticket(
@@ -98,10 +82,12 @@ def run_agent():
     print("=" * 60)
     print("🚀 ServiceNow Ticket Approval Agent")
     print("=" * 60)
+    print("\n📌 Agent will open browser windows.")
+    print("   Please complete login manually when prompted.")
+    print("   Agent will take over after login is detected.\n")
     
     # Load configuration
     config = load_config()
-    credentials = load_credentials(config)
     
     # Initialize logger
     logger = DecisionLogger(
@@ -110,7 +96,7 @@ def run_agent():
     )
     
     # Print CAD rule summary
-    print(f"\n📋 CAD Validation: {CADValidator(config).get_rule_summary()}")
+    print(f"📋 CAD Validation: {CADValidator(config).get_rule_summary()}")
     
     # Initialize browser modules
     snow_browser = SnowBrowser(config)
@@ -120,33 +106,31 @@ def run_agent():
     try:
         # Start browser
         print("\n🌐 Starting browser...")
-        snow_browser.start(        headless=config['browser'].get('headless', False))
+        snow_browser.start(headless=config['browser'].get('headless', False))
         
-        # Login to ServiceNow
-        print("\n🔑 Logging into ServiceNow...")
-        if not snow_browser.login_sso(
-            credentials['snow_username'],
-            credentials['snow_password']
-        ):
-            print("❌ Failed to login to ServiceNow. Exiting.")
+        # Open ServiceNow and wait for manual login
+        print("\n🔑 Step 1: Login to ServiceNow")
+        if not snow_browser.open_snow_and_wait_for_login():
+            print("❌ Failed to detect ServiceNow login. Exiting.")
             return
         
         # Share browser page with IIS checker
         iis_checker.set_page(snow_browser.page)
         
-        # Login to IIS server
-        print("\n🔑 Logging into IIS server...")
-        if not iis_checker.login(
-            credentials['iis_username'],
-            credentials['iis_password']
-        ):
-            print("❌ Failed to login to IIS server. Exiting.")
+        # Open IIS server and wait for manual login
+        print("\n🔑 Step 2: Login to IIS Server")
+        if not iis_checker.open_iis_and_wait_for_login():
+            print("❌ Failed to detect IIS login. Exiting.")
             return
         
         # Main loop
         check_interval = config['schedule']['interval_minutes'] * 60
         max_runs = config['schedule']['max_runs_per_day']
         run_count = 0
+        
+        print("\n" + "=" * 60)
+        print("✅ Agent is now ACTIVE and monitoring tickets")
+        print("=" * 60)
         
         while run_count < max_runs:
             print(f"\n{'='*60}")

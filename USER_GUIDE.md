@@ -13,8 +13,7 @@
 5. [Running the Agent](#running-the-agent)
 6. [Understanding the Output](#understanding-the-output)
 7. [Troubleshooting](#troubleshooting)
-8. [Maintenance](#maintenance)
-9. [FAQ](#faq)
+8. [FAQ](#faq)
 
 ---
 
@@ -30,26 +29,22 @@ The ServiceNow Ticket Approval Agent is an automated tool that:
 - Automatically approves or rejects tickets
 - Logs all decisions for audit purposes
 
-### Who should use this?
+### How It Works (No Credentials Needed!)
 
-- IT administrators handling ServiceNow approvals
-- Teams with repeated approval workflows
-- Organizations with CAD compliance requirements
+```
+1. You run the agent
+2. Agent opens browser windows
+3. YOU login manually using your existing credentials/SSO
+4. Agent detects login is complete
+5. Agent takes over and processes tickets automatically
+6. Agent logs all decisions for audit
+```
 
-### Benefits
-
-| Manual Process | With Agent |
-|----------------|------------|
-| 2-3 times/day manual checking | Automatic monitoring |
-| Human error possible | Consistent rule application |
-| No audit trail | Full logging with timestamps |
-| Time-consuming | Saves hours per week |
+**Key Point:** The agent never sees or stores your passwords. You login manually, and the agent uses the active browser session.
 
 ---
 
 ## System Requirements
-
-### Minimum Requirements
 
 | Component | Requirement |
 |-----------|-------------|
@@ -59,20 +54,15 @@ The ServiceNow Ticket Approval Agent is an automated tool that:
 | Disk Space | 500 MB |
 | Network | Access to ServiceNow and IIS server |
 
-### Software Dependencies
-
-- Python 3.10+
-- pip (Python package manager)
-- Chromium browser (installed by Playwright)
-
 ---
 
 ## Installation
 
-### Step 1: Navigate to Project Directory
+### Step 1: Clone Repository
 
 ```bash
-cd /Users/sandesh/Desktop/myProjects/snow-agent
+git clone https://github.com/srathi/servicenow_cad_checker.git
+cd servicenow_cad_checker
 ```
 
 ### Step 2: Install Python Dependencies
@@ -81,61 +71,25 @@ cd /Users/sandesh/Desktop/myProjects/snow-agent
 pip install -r requirements.txt
 ```
 
-This installs:
-- `playwright` - Browser automation
-- `pyyaml` - Configuration file handling
-- `python-dotenv` - Environment variable management
-
 ### Step 3: Install Chromium Browser
 
 ```bash
 playwright install chromium
 ```
 
-This downloads Chromium browser (required for automation).
-
 ### Step 4: Verify Installation
 
 ```bash
-python -c "import playwright; print('Playwright installed successfully')"
+python -c "import playwright; print('Installation successful')"
 ```
 
 ---
 
 ## Configuration
 
-### Step 1: Create Environment File
+### Edit config.yaml
 
-```bash
-cp .env.example .env
-```
-
-### Step 2: Edit Environment File
-
-Open `.env` in any text editor:
-
-```bash
-nano .env
-# Or use VS Code, Vim, etc.
-```
-
-Add your credentials:
-
-```bash
-# ServiceNow Credentials
-SNOW_USERNAME=your.snow.username
-SNOW_PASSWORD=your.snow.password
-
-# IIS Server Credentials
-IIS_USERNAME=your.iis.username
-IIS_PASSWORD=your.iis.password
-```
-
-**IMPORTANT:** Never commit `.env` to version control!
-
-### Step 3: Edit Configuration File
-
-Open `config.yaml`:
+Open `config.yaml` in any text editor:
 
 ```bash
 nano config.yaml
@@ -146,7 +100,6 @@ nano config.yaml
 ```yaml
 snow:
   instance_url: "https://yourcompany.service-now.com"  # Your instance URL
-  login_path: "/login.do"                              # Login page path
   approvals_path: "/approvals.do"                      # Approvals list path
 ```
 
@@ -160,7 +113,6 @@ snow:
 ```yaml
 iis:
   base_url: "https://iis-server.company.com"  # Your IIS server URL
-  login_path: "/login"                         # Login page path
   asset_search_path: "/asset-search"           # Asset search page path
 ```
 
@@ -169,8 +121,8 @@ iis:
 ```yaml
 browser:
   headless: false      # false = visible browser, true = invisible
-  slow_mo: 100         # Milliseconds between actions (increase if unstable)
-  timeout: 30000       # Timeout in milliseconds (30 seconds)
+  slow_mo: 100         # Milliseconds between actions
+  timeout: 30000       # Timeout in milliseconds
 ```
 
 **Recommendation for first run:**
@@ -181,33 +133,20 @@ browser:
   timeout: 60000       # Longer timeout
 ```
 
+#### Login Settings
+
+```yaml
+login:
+  wait_for_login: true
+  login_timeout: 120000  # 2 minutes to complete manual login
+```
+
 #### Schedule Settings
 
 ```yaml
 schedule:
-  enabled: true
   interval_minutes: 5  # Check every 5 minutes
-  max_runs_per_day: 10 # Stop after 10 runs (safety limit)
-```
-
-### Step 4: Configure CAD Rules (Optional)
-
-When ready to enable CAD validation:
-
-```yaml
-cad_rules:
-  enabled: true  # Change from false to true
-  rules:
-    - name: "license_check"
-      field: "software_license"
-      condition: "valid"
-      failure_message: "Software license is not active"
-    
-    - name: "version_check"
-      field: "version"
-      condition: ">=2.0"
-      expected: "2.0"
-      failure_message: "Software version is outdated"
+  max_runs_per_day: 10 # Stop after 10 runs
 ```
 
 ---
@@ -220,7 +159,7 @@ cad_rules:
 
 2. **Navigate to project:**
    ```bash
-   cd /Users/sandesh/Desktop/myProjects/snow-agent
+   cd /path/to/servicenow_cad_checker
    ```
 
 3. **Run the agent:**
@@ -228,21 +167,47 @@ cad_rules:
    python main.py
    ```
 
-4. **Watch the output:**
+4. **Follow the prompts:**
    ```
    ============================================================
    🚀 ServiceNow Ticket Approval Agent
    ============================================================
    
+   📌 Agent will open browser windows.
+      Please complete login manually when prompted.
+      Agent will take over after login is detected.
+   
    📋 CAD Validation: CAD rules are DISABLED
    
    🌐 Starting browser...
    
-   🔑 Logging into ServiceNow...
-   ✅ SSO Login successful
+   🔑 Step 1: Login to ServiceNow
    
-   🔑 Logging into IIS server...
-   ✅ IIS Login successful
+   🔑 Opening ServiceNow: https://yourcompany.service-now.com
+      👉 Please complete login in the browser window
+      ⏳ Waiting for login (timeout: 120s)...
+   ```
+
+5. **Complete login in browser:**
+   - The browser window will open
+   - Login using your normal credentials/SSO
+   - The agent will detect when login is complete
+
+6. **Agent takes over:**
+   ```
+   ✅ Login detected! Agent is now active.
+   
+   🔑 Step 2: Login to IIS Server
+   
+   🔑 Opening IIS Server: https://iis-server.company.com
+      👉 Please complete login in the browser window
+      ⏳ Waiting for login (timeout: 120s)...
+   
+   ✅ IIS Login detected! Agent is now active.
+   
+   ============================================================
+   ✅ Agent is now ACTIVE and monitoring tickets
+   ============================================================
    
    ============================================================
    📋 Check #1 at 2026-09-11 10:30:15
@@ -254,52 +219,20 @@ cad_rules:
       🔍 Found asset: CAD-WS-001
       ✅ Completed in 12.3s - Decision: APPROVED
    
-   🔄 Processing ticket: REQ0012346
-      Asset: CAD-WS-002
-      🔍 Found asset: CAD-WS-002
-      ✅ Completed in 8.7s - Decision: REJECTED
-   
-   📊 Stats: 2 total | 1 approved | 1 rejected
+   📊 Stats: 1 total | 1 approved | 0 rejected
    
    ⏰ Waiting 5 minutes until next check...
    ```
 
-### Production Run
+### Stopping the Agent
 
-For unattended operation:
-
-1. **Edit config.yaml:**
-   ```yaml
-   browser:
-     headless: true       # Invisible browser
-     slow_mo: 100         # Normal speed
-   ```
-
-2. **Run in background:**
-   ```bash
-   # macOS/Linux
-   nohup python main.py > agent.log 2>&1 &
-   
-   # Or use screen/tmux
-   screen -S snow-agent
-   python main.py
-   # Detach: Ctrl+A, D
-   ```
-
-3. **Stop the agent:**
-   ```bash
-   # Find process
-   ps aux | grep main.py
-   
-   # Kill process
-   kill <PID>
-   ```
+Press `Ctrl+C` in the terminal to stop the agent.
 
 ---
 
 ## Understanding the Output
 
-### Console Output
+### Console Symbols
 
 | Symbol | Meaning |
 |--------|---------|
@@ -311,8 +244,9 @@ For unattended operation:
 | 🔍 | Found |
 | 🔑 | Authentication |
 | 🌐 | Browser |
+| 👉 | Action required from user |
 
-### Decision Log (CSV)
+### Decision Log
 
 Located at: `logs/decisions.csv`
 
@@ -321,63 +255,40 @@ timestamp,ticket_id,requestor,asset_id,decision,reason,system_or_user,execution_
 2026-09-11 10:30:15,REQ0012345,john.doe,CAD-WS-001,APPROVED,CAD compliant,system,12.3
 ```
 
-**Reading the log:**
-- `timestamp`: When the decision was made
-- `ticket_id`: ServiceNow ticket number
-- `requestor`: Person who requested
-- `asset_id`: Asset being requested
-- `decision`: APPROVED or REJECTED
-- `reason`: Why this decision was made
-- `system_or_user`: "system" = auto, "user" = manual override
-- `execution_time_sec`: How long it took
+**Log Fields:**
 
-### Viewing Statistics
-
-```python
-from modules.logger import DecisionLogger
-
-logger = DecisionLogger()
-stats = logger.get_stats()
-print(stats)
-# Output: {'total': 25, 'approved': 20, 'rejected': 5, 'approval_rate': '80.0%'}
-```
+| Field | Description |
+|-------|-------------|
+| timestamp | When the decision was made |
+| ticket_id | ServiceNow ticket ID |
+| requestor | Who requested the ticket |
+| asset_id | Asset being requested |
+| decision | APPROVED or REJECTED |
+| reason | Why the decision was made |
+| system_or_user | "system" for auto, "user" for manual |
+| execution_time_sec | How long it took |
 
 ---
 
 ## Troubleshooting
 
-### Issue: SSO Login Fails
+### Issue: Agent doesn't detect login
 
 **Symptoms:**
 ```
-❌ SSO Login failed: Timeout waiting for selector
+❌ Login timeout or error
 ```
 
 **Solutions:**
-1. Check your SSO login URL in config.yaml
-2. Update the login selectors in `modules/snow_browser.py`:
-   ```python
-   # Find this line and update the selector
-   self.page.fill('input[name="username"]', username)  # Update selector
+1. Ensure you completed login in the browser
+2. Increase login timeout in config.yaml:
+   ```yaml
+   login:
+     login_timeout: 180000  # 3 minutes
    ```
-3. Take a screenshot to debug:
-   ```python
-   self.page.screenshot(path="debug_sso.png")
-   ```
+3. Check if SSO requires additional steps
 
-### Issue: IIS Connection Error
-
-**Symptoms:**
-```
-❌ IIS Login failed: net::ERR_CONNECTION_REFUSED
-```
-
-**Solutions:**
-1. Verify IIS server URL is correct
-2. Check if you're on VPN/network
-3. Test manually in browser first
-
-### Issue: No Tickets Found
+### Issue: No tickets found
 
 **Symptoms:**
 ```
@@ -385,102 +296,58 @@ print(stats)
 ```
 
 **Solutions:**
-1. Verify ServiceNow approvals path
+1. Verify ServiceNow approvals path in config.yaml
 2. Check if you have approval permissions
 3. Look for tickets manually in ServiceNow
 
-### Issue: Browser Crashes
+### Issue: Browser doesn't open
 
 **Symptoms:**
 ```
-❌ Agent error: Browser closed unexpectedly
+❌ Agent error: Browser failed to start
 ```
 
 **Solutions:**
-1. Increase timeout in config.yaml:
-   ```yaml
-   browser:
-     timeout: 60000  # Increase to 60 seconds
+1. Reinstall Chromium:
+   ```bash
+   playwright install chromium
    ```
 2. Check available memory
-3. Reduce slow_mo value
+3. Try running with headless: false
+
+### Issue: IIS server not found
+
+**Symptoms:**
+```
+❌ IIS Login timeout or error
+```
+
+**Solutions:**
+1. Verify IIS server URL in config.yaml
+2. Check if you're on VPN/network
+3. Test manually in browser first
 
 ### Debug Mode
 
-1. **Enable screenshots:**
-   ```python
-   # In any module, add:
-   self.page.screenshot(path="debug.png")
-   ```
-
-2. **Enable verbose logging:**
-   ```yaml
-   # config.yaml
-   logging:
-     log_level: "DEBUG"
-   ```
-
-3. **Run with visible browser:**
+1. **Run with visible browser:**
    ```yaml
    browser:
      headless: false
      slow_mo: 1000  # Very slow
    ```
 
----
-
-## Maintenance
-
-### Daily Checks
-
-1. **Review decision log:**
+2. **Check logs:**
    ```bash
    tail -20 logs/decisions.csv
-   ```
-
-2. **Check agent status:**
-   ```bash
-   ps aux | grep main.py
-   ```
-
-### Weekly Maintenance
-
-1. **Archive old logs:**
-   ```bash
-   mv logs/decisions.csv logs/decisions_$(date +%Y%m%d).csv
-   ```
-
-2. **Check for errors:**
-   ```bash
-   grep "REJECTED" logs/decisions.csv | wc -l
-   ```
-
-### Updating the Agent
-
-1. **Backup config:**
-   ```bash
-   cp config.yaml config.yaml.backup
-   cp .env .env.backup
-   ```
-
-2. **Pull updates:**
-   ```bash
-   git pull
-   ```
-
-3. **Reinstall dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Test changes:**
-   ```bash
-   python main.py
    ```
 
 ---
 
 ## FAQ
+
+### Q: Do I need to store my password?
+
+**A:** No! The agent uses manual login. You login in the browser, and the agent uses the active session. Your credentials are never stored.
 
 ### Q: Can I run this on a server?
 
@@ -489,20 +356,17 @@ print(stats)
 - Network access to ServiceNow and IIS
 - Consider Docker for easier deployment
 
-### Q: What if my password changes?
+### Q: What happens if my session expires?
 
-**A:** Update `.env` file:
-```bash
-SNOW_PASSWORD=new_password
-```
+**A:** The agent will fail to fetch tickets. Stop the agent (Ctrl+C), restart it, and login again.
 
 ### Q: Can I approve tickets manually?
 
 **A:** Yes, the agent logs both system and user decisions. Manual approvals show as "user" in the log.
 
-### Q: How do I add new CAD rules?
+### Q: How do I add CAD rules?
 
-**A:** Edit `config.yaml` under `cad_rules.rules`. See [CAD Rules Configuration](#step-4-configure-cad-rules-optional).
+**A:** Edit `config.yaml` under `cad_rules`. See [Configuration](#configuration) section.
 
 ### Q: Can I customize the approval comment?
 
@@ -514,14 +378,7 @@ def get_comment_for_approval(self, asset):
 
 ### Q: What happens if the agent crashes?
 
-**A:** Check `logs/decisions.csv` for the last successful operation. Restart the agent:
-```bash
-python main.py
-```
-
-### Q: Can I run multiple instances?
-
-**A:** Not recommended. Use one instance with appropriate schedule settings.
+**A:** Check `logs/decisions.csv` for the last successful operation. Restart the agent and login again.
 
 ### Q: How do I know if the agent is running?
 
@@ -545,19 +402,6 @@ For issues or questions:
 2. Review [Troubleshooting](#troubleshooting) section
 3. Check the [README.md](README.md)
 4. Create an issue in the repository
-
----
-
-## Changelog
-
-### Version 1.0.0 (2026-09-11)
-
-- Initial release
-- ServiceNow browser automation
-- IIS server integration
-- CAD compliance validation (placeholder)
-- Decision logging
-- Configurable schedule
 
 ---
 
